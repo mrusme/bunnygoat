@@ -34,5 +34,22 @@ $ bunnygoat \
   "$GOATCOUNTER_SITE"
 ```
 
+Bunnygoat also supports passing additional arguments to the `goatcounter import`
+command, by appending them after the last argument:
+
+```sh
+$ bunnygoat \
+  "$BUNNY_API_KEY" \
+  "$BUNNY_DOMAIN" \
+  "$BUNNY_PULLZONE_ID" \
+  "$BUNNY_LOG_DATE" \
+  "$GOATCOUNTER_API_KEY" \
+  "$GOATCOUNTER_SITE" \
+  -exclude static \
+  -exclude redirect \
+  -exclude 'path:glob:/{buttons,css,fonts,favicons}/**' \
+  -exclude 'path:glob:/**.{gif,png,jpg,css,js}'
+```
+
 It is possible to create a cron job that runs the command periodically to import
 data from BunnyCDN into GoatCounter.
