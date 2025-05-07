@@ -1,0 +1,58 @@
+#!/bin/sh
+
+BUNNY_API_KEY="$1"
+BUNNY_DOMAIN="$2"
+BUNNY_PULLZONE_ID="$3"
+BUNNY_LOG_DATE="$4"
+
+export GOATCOUNTER_API_KEY="$5"
+GOATCOUNTER_SITE="$6"
+
+if [ -z "$BUNNY_API_KEY" ] || \
+   [ -z "$BUNNY_DOMAIN" ] || \
+   [ -z "$BUNNY_PULLZONE_ID" ] || \
+   [ -z "$BUNNY_LOG_DATE" ] || \
+   [ -z "$GOATCOUNTER_API_KEY" ] || \
+   [ -z "$GOATCOUNTER_SITE" ]; then
+  printf 'usage: %s "$BUNNY_API_KEY" "$BUNNY_DOMAIN" "$BUNNY_PULLZONE_ID" "$BUNNY_LOG_DATE" "$GOATCOUNTER_API_KEY" "$GOATCOUNTER_SITE"\n' "$0"
+  printf "\n(you can export all the env variables and copy-paste the command for your convenience)\n"
+  printf "\n"
+  printf "Arguments:\n"
+  printf "\tBUNNY_API_KEY:\t\tAPI key from https://dash.bunny.net/account/api-key\n"
+  printf "\tBUNNY_DOMAIN:\t\tThe pull zone domain that shows up in the logs, e.g. 'example.com'\n"
+  printf "\tBUNNY_PULLZONE_ID:\tThe pull zone ID (numeric), e.g. '1234567'\n"
+  printf "\tBUNNY_LOG_DATE:\t\tThe date for which the log should be requested in 'MM-DD-YY', e.g. '12-30-24'\n"
+  printf "\tGOATCOUNTER_API_KEY:\tThe GOATCOUNTER_API_KEY from https://stats.example.com/user/api\n"
+  printf "\tGOATCOUNTER_SITE:\tSite to import to, as an URL, e.g. https://stats.example.com\n"
+  printf "\n"
+  printf "Report bugs at: https://github.com/mrusme/bunnygoat\n"
+  exit 1
+fi
+
+
+LOG_TMP="$(mktemp)"
+
+printf "Created temporary log file at %s; Downloading log ...\n" "$LOG_TMP"
+
+curl -s \
+  --location \
+  --header "AccessKey: $BUNNY_API_KEY" \
+  --header 'Accept-Encoding: gzip' \
+  -o "$LOG_TMP.gz" \
+  "https://logging.bunnycdn.com/$BUNNY_LOG_DATE/$BUNNY_PULLZONE_ID.log" \
+&& gunzip -f "$LOG_TMP.gz"
+
+if [ ! -f "$LOG_TMP" ]; then
+  printf "Unable to download/unzip log. Abort.\n"
+  exit 1
+fi
+
+printf "Log downloaded. Importing ...\n"
+
+goatcounter import -silent \
+  -site "$GOATCOUNTER_SITE" \
+  -datetime unixmilli \
+  -format $(printf 'log:$ignore|$status|$datetime|$size|$host|$remote_addr|$referrer|$ignore://%s$path|$ignore|$user_agent|$ignore|$ignore' "$BUNNY_DOMAIN") \
+  "$LOG_TMP"
+
+printf "Import completed.\n"
